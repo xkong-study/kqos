@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kqos-agent
+  namespace: kqos-system
+  labels:
+    app.kubernetes.io/name: kqos
+    app.kubernetes.io/component: agent
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kqos
+      app.kubernetes.io/component: agent
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # One node at a time. The agent is the component that can evict pods, so
+      # a bad rollout should be caught on node one rather than everywhere.
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kqos
+        app.kubernetes.io/component: agent
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        # The agent is infrastructure, not a workload kqos manages. Classifying
+        # it as system_cores keeps it out of its own reclaim maths and makes it
+        # ineligible for its own eviction plugins.
+        kqos.io/qos-level: system_cores
+    spec:
+      serviceAccountName: kqos-agent
+      priorityClassName: system-node-critical
+      hostPID: false
+      tolerations:
+        # Must run everywhere, including on tainted control-plane nodes: an
+        # unmonitored node is a node kqos will happily keep selling capacity on.
+        - operator: Exists
+      containers:
+        - name: agent
+          image: kqos:dev
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/local/bin/kqos-agent"]
+          args:
+            - --interval=10s
+            - --cgroup-root=/sys/fs/cgroup
+            - --sys-node-path=/host/sys/devices/system/node
+            - --usage-endpoint=http://kqos-controller-usage.kqos-system.svc:8090
+            - --usage-fanout=true
+            - --enforce=true
+            - --metrics-bind-address=:8080
+            - --health-probe-bind-address=:8081
+            - --zap-log-level=info
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - name: metrics
+              containerPort: 8080
+            - name: health
+              containerPort: 8081
+          securityContext:
+            # Writing cpu.weight into another container's cgroup requires
+            # privileges no ordinary workload should have. This is the one
+            # place in kqos where that is unavoidable, and it is why the agent
+            # does as little as possible.
+            privileged: true
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: cgroup
+              mountPath: /sys/fs/cgroup
+            - name: sys
+              mountPath: /host/sys
+              readOnly: true
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: cgroup
+          hostPath:
+            path: /sys/fs/cgroup
+            type: Directory
+        - name: sys
+          hostPath:
+            path: /sys
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kqos-agent
+  namespace: kqos-system
+  labels:
+    app.kubernetes.io/name: kqos
+    app.kubernetes.io/component: agent
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: kqos
+    app.kubernetes.io/component: agent
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: 8080

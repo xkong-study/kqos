@@ -1,0 +1,59 @@
+# The reclaimed tier: work that runs on capacity the online tier is paying for
+# but not using.
+---
+# batch-etl asks for 1500m of CPU per replica, which the cluster does not have
+# spare in the ordinary sense -- add it up and the online tier has already
+# claimed most of the allocatable capacity.
+#
+# It schedules anyway, because the webhook rewrites those requests into
+# kqos.io/reclaimed-cpu, and the overcommit controller has advertised several
+# cores of that on every node. Nothing was oversubscribed in the process: the
+# real cpu request on these pods after admission is zero.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: batch-etl
+  namespace: kqos-demo
+  labels:
+    app: batch-etl
+    tier: batch
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: batch-etl
+  template:
+    metadata:
+      labels:
+        app: batch-etl
+      annotations:
+        kqos.io/qos-level: reclaimed_cores
+    spec:
+      # Negative priority: this tier yields to everything. Combined with
+      # cpu.weight=10 written by the agent, a batch pod on a contended node
+      # receives roughly one percent of the CPU a shared_cores pod does, while
+      # still running flat out when the node is quiet.
+      priorityClassName: kqos-reclaimed
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: worker
+          image: kqos:dev
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          # Genuinely CPU-hungry: it will take everything it is given. That is
+          # the correct behaviour for batch work and the reason the reclaimed
+          # tier needs a hard eviction story rather than good manners.
+          args:
+            - |
+              echo "batch worker starting on $(hostname)"
+              while true; do :; done
+          resources:
+            requests:
+              cpu: 1500m
+              memory: 256Mi
+            limits:
+              # The memory limit survives the rewrite deliberately. The
+              # extended resource governs scheduling; this governs the runtime,
+              # and without it a reclaimed pod could take the node down before
+              # any eviction policy noticed.
+              memory: 256Mi

@@ -1,0 +1,42 @@
+# Drives a node into genuine CPU pressure so the eviction path can be observed
+# end to end. Applied separately from the main demo -- `kubectl apply -f
+# examples/` does not recurse -- because it deliberately makes the cluster
+# unhappy.
+#
+# Each replica asks for 200m of reclaimed CPU and then burns a whole core. That
+# is a 5x overrun, which is both the realistic failure mode for batch work and
+# the exact condition the reclaimed-overrun plugin exists to catch.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-hog
+  namespace: kqos-demo
+  labels:
+    app: cpu-hog
+    tier: batch
+spec:
+  replicas: 12
+  selector:
+    matchLabels:
+      app: cpu-hog
+  template:
+    metadata:
+      labels:
+        app: cpu-hog
+      annotations:
+        kqos.io/qos-level: reclaimed_cores
+    spec:
+      priorityClassName: kqos-reclaimed
+      terminationGracePeriodSeconds: 5
+      containers:
+        - name: hog
+          image: kqos:dev
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["while true; do :; done"]
+          resources:
+            requests:
+              cpu: 200m
+              memory: 64Mi
+            limits:
+              memory: 64Mi

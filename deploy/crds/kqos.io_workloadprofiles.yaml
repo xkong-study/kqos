@@ -1,0 +1,287 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: workloadprofiles.kqos.io
+spec:
+  group: kqos.io
+  names:
+    categories:
+    - kqos
+    kind: WorkloadProfile
+    listKind: WorkloadProfileList
+    plural: workloadprofiles
+    shortNames:
+    - wp
+    singular: workloadprofile
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.targetRef.name
+      name: Target
+      type: string
+    - jsonPath: .spec.qosLevel
+      name: QoS
+      type: string
+    - jsonPath: .status.podCount
+      name: Pods
+      type: integer
+    - jsonPath: .status.cpu.p95
+      name: CPU-P95
+      type: string
+    - jsonPath: .status.recommendation.cpu
+      name: Rec-CPU
+      type: string
+    - jsonPath: .status.wastePercent
+      name: Waste%
+      type: integer
+    - jsonPath: .status.confidence
+      name: Confidence
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          WorkloadProfile is the service-profiling record for one workload: what it
+          asks for, what it actually uses, and what it should ask for instead.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: WorkloadProfileSpec declares what to profile and how.
+            properties:
+              qosLevel:
+                default: shared_cores
+                description: |-
+                  QoSLevel the workload's pods run at. Used to decide whether the
+                  recommendation should be conservative (guaranteed tiers) or aggressive
+                  (reclaimed tier).
+                type: string
+              safetyMarginPercent:
+                default: 20
+                description: |-
+                  SafetyMarginPercent is added on top of the observed percentile before it
+                  becomes a recommendation.
+                format: int32
+                type: integer
+              targetRef:
+                description: TargetRef is the workload whose pods are sampled.
+                properties:
+                  apiVersion:
+                    description: APIVersion of the target, e.g. "apps/v1".
+                    type: string
+                  kind:
+                    description: Kind of the target, e.g. "Deployment".
+                    type: string
+                  name:
+                    description: Name of the target in the profile's namespace.
+                    type: string
+                required:
+                - apiVersion
+                - kind
+                - name
+                type: object
+            required:
+            - targetRef
+            type: object
+          status:
+            description: |-
+              WorkloadProfileStatus is the profiling result and the resource
+              recommendation derived from it.
+            properties:
+              conditions:
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              confidence:
+                description: |-
+                  Confidence is Low until the window is full, then Medium, then High once
+                  the workload has been observed across a full traffic cycle.
+                enum:
+                - Low
+                - Medium
+                - High
+                type: string
+              cpu:
+                description: CPU is the per-pod CPU usage distribution.
+                properties:
+                  max:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  p50:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  p90:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  p95:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  p99:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                type: object
+              currentRequests:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: CurrentRequests is the sum of requests currently declared
+                  per pod.
+                type: object
+              lastUpdated:
+                description: LastUpdated is when the statistics were last recomputed.
+                format: date-time
+                type: string
+              memory:
+                description: Memory is the per-pod memory usage distribution.
+                properties:
+                  max:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  p50:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  p90:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  p95:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  p99:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                type: object
+              podCount:
+                description: PodCount is how many pods of the workload were seen in
+                  the last pass.
+                format: int32
+                type: integer
+              recommendation:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: |-
+                  Recommendation is what kqos believes the pod should request. Advisory
+                  only: kqos reports it, a human or an autoscaler applies it.
+                type: object
+              samples:
+                description: Samples is how many observations back the statistics.
+                format: int64
+                type: integer
+              wastePercent:
+                description: |-
+                  WastePercent is how much of the current request the workload never
+                  touches. This is the number that justifies the whole reclaimed tier.
+                format: int32
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

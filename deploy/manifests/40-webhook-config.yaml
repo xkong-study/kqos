@@ -1,0 +1,51 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: kqos-pod-mutator
+  labels:
+    app.kubernetes.io/name: kqos
+webhooks:
+  - name: pods.kqos.io
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    # Five seconds, not thirty. Admission latency is on the critical path of
+    # every pod creation in the cluster, and kqos would rather skip a pod than
+    # slow the whole control plane down waiting for itself.
+    timeoutSeconds: 5
+    # Fail open, deliberately. kqos is an optimisation layer: a pod admitted
+    # without a QoS annotation runs correctly, it just does not participate in
+    # overcommit. A pod that cannot be created at all because the optimiser is
+    # down is a far worse outcome.
+    failurePolicy: Ignore
+    reinvocationPolicy: Never
+    clientConfig:
+      service:
+        name: kqos-webhook
+        namespace: kqos-system
+        path: /mutate-v1-pod
+        port: 443
+      # Replaced by hack/gen-webhook-certs.sh at install time.
+      caBundle: ""
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+        scope: "Namespaced"
+    namespaceSelector:
+      matchExpressions:
+        # Never intercept the control plane's own namespaces or kqos's. A
+        # circular dependency between admission and the components that serve
+        # admission makes a cluster unrecoverable after a full restart.
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - kube-public
+            - kube-node-lease
+            - kqos-system
+            - local-path-storage
+    objectSelector:
+      matchExpressions:
+        - key: kqos.io/skip-webhook
+          operator: DoesNotExist

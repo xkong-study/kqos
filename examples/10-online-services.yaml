@@ -1,0 +1,115 @@
+# The protected tiers: what the cluster is nominally for, and what kqos must
+# never disturb.
+---
+# web-frontend is the archetype kqos exists to exploit. It requests 600m and
+# 512Mi per replica because somebody sized it once, during a load test, three
+# years ago. It actually uses about 60m. Six replicas therefore hold 3.6 cores
+# of the cluster hostage to consume roughly a third of one.
+#
+# Nothing here is wrong, exactly -- the request is the safety margin that keeps
+# it fast during a spike. The point of kqos is that the margin can be lent out
+# between spikes instead of sitting idle.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-frontend
+  namespace: kqos-demo
+  labels:
+    app: web-frontend
+    tier: online
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: web-frontend
+  template:
+    metadata:
+      labels:
+        app: web-frontend
+      annotations:
+        kqos.io/qos-level: shared_cores
+    spec:
+      containers:
+        - name: app
+          image: kqos:dev
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          # A 10% duty cycle: a short burst of work, then idle. Realistic for a
+          # request-serving process between traffic peaks, and the gap between
+          # this and the 600m request is exactly what the advisor resells.
+          args:
+            - |
+              while true; do
+                end=$(( $(date +%s) + 1 ))
+                while [ $(date +%s) -lt $end ]; do :; done
+                sleep 9
+              done
+          resources:
+            requests:
+              cpu: 600m
+              memory: 512Mi
+            limits:
+              cpu: 1200m
+              memory: 1Gi
+---
+# ads-ranking is the workload that must not be touched. It takes whole
+# exclusive cores, and the annotation asks for them inside a single NUMA zone
+# so its threads and its memory stay on the same side of the interconnect.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ads-ranking
+  namespace: kqos-demo
+  labels:
+    app: ads-ranking
+    tier: online
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ads-ranking
+  template:
+    metadata:
+      labels:
+        app: ads-ranking
+      annotations:
+        kqos.io/qos-level: dedicated_cores
+        kqos.io/numa-binding: "true"
+    spec:
+      containers:
+        - name: app
+          image: kqos:dev
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                end=$(( $(date +%s) + 2 ))
+                while [ $(date +%s) -lt $end ]; do :; done
+                sleep 8
+              done
+          resources:
+            # Whole cores, and requests equal to limits. The webhook rejects a
+            # dedicated_cores pod with a fractional CPU request, because an
+            # exclusive assignment cannot honour one.
+            requests:
+              cpu: "1"
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+# A disruption budget on the shared tier. kqos calls the eviction API rather
+# than deleting pods precisely so that this is enforced: if evicting a
+# web-frontend replica would drop the deployment below five available, the API
+# server refuses and kqos records the refusal instead of overriding it.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web-frontend
+  namespace: kqos-demo
+spec:
+  minAvailable: 5
+  selector:
+    matchLabels:
+      app: web-frontend

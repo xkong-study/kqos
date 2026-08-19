@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kqos-controller
+  namespace: kqos-system
+  labels:
+    app.kubernetes.io/name: kqos
+    app.kubernetes.io/component: controller
+spec:
+  # Two replicas with leader election: one reconciles, the other is warm. Both
+  # accept usage reports, so a failover does not blind the profiler.
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kqos
+      app.kubernetes.io/component: controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kqos
+        app.kubernetes.io/component: controller
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        kqos.io/qos-level: system_cores
+    spec:
+      serviceAccountName: kqos-controller
+      priorityClassName: system-cluster-critical
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: kqos
+                    app.kubernetes.io/component: controller
+      containers:
+        - name: controller
+          image: kqos:dev
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/local/bin/kqos-controller"]
+          args:
+            - --leader-elect=true
+            - --usage-bind-address=:8090
+            - --usage-retention=10m
+            - --auto-discover-workloads=true
+            - --metrics-bind-address=:8080
+            - --health-probe-bind-address=:8081
+            - --zap-log-level=info
+          ports:
+            - name: metrics
+              containerPort: 8080
+            - name: health
+              containerPort: 8081
+            - name: usage
+              containerPort: 8090
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kqos-controller
+  namespace: kqos-system
+  labels:
+    app.kubernetes.io/name: kqos
+    app.kubernetes.io/component: controller
+spec:
+  selector:
+    app.kubernetes.io/name: kqos
+    app.kubernetes.io/component: controller
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: 8080
+    - name: usage
+      port: 8090
+      targetPort: 8090
+---
+# A headless Service alongside the ClusterIP one. DNS for this name returns an
+# A record per replica rather than a single virtual IP, which is what lets each
+# agent deliver its usage report to every controller instead of to whichever
+# backend conntrack happens to pin it to.
+apiVersion: v1
+kind: Service
+metadata:
+  name: kqos-controller-usage
+  namespace: kqos-system
+  labels:
+    app.kubernetes.io/name: kqos
+    app.kubernetes.io/component: controller
+spec:
+  clusterIP: None
+  # Report to replicas that are still starting up too: a controller that has
+  # not finished its initial cache sync can still accept and buffer samples,
+  # and will be warm by the time it is eligible to lead.
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: kqos
+    app.kubernetes.io/component: controller
+  ports:
+    - name: usage
+      port: 8090
+      targetPort: 8090

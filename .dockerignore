@@ -1,0 +1,7 @@
+bin/
+.git/
+deploy/
+docs/
+examples/
+hack/
+*.md

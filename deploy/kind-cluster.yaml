@@ -1,0 +1,52 @@
+# A three-node kind cluster sized so that overcommit is actually observable.
+#
+# Two workers rather than one: a single-node cluster hides every distributed
+# problem in the system -- stale profiles, per-node advertisement, the
+# scheduler choosing between nodes with different amounts of spare capacity.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: kqos
+
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      # Reserve headroom on the control plane so the API server does not
+      # compete with demo workloads. kqos itself is small; the load generators
+      # are not.
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          taints:
+            - key: node-role.kubernetes.io/control-plane
+              effect: NoSchedule
+          kubeletExtraArgs:
+            node-labels: "kqos.io/role=control-plane"
+
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "kqos.io/role=worker,kqos.io/tier=general"
+            # A deliberately small allocatable so the demo can drive a node to
+            # pressure without needing a hundred pods. system-reserved is the
+            # honest way to do this: it shrinks allocatable without lying about
+            # capacity.
+            system-reserved: "cpu=500m,memory=512Mi"
+            kube-reserved: "cpu=250m,memory=256Mi"
+            # PSI is the input the cpu-suppression eviction plugin keys off, and
+            # it is only exported when the kernel has it compiled in. kind's
+            # node image does; this label records the expectation.
+            eviction-hard: "memory.available<100Mi,nodefs.available<5%"
+
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "kqos.io/role=worker,kqos.io/tier=general"
+            system-reserved: "cpu=500m,memory=512Mi"
+            kube-reserved: "cpu=250m,memory=256Mi"
+            eviction-hard: "memory.available<100Mi,nodefs.available<5%"

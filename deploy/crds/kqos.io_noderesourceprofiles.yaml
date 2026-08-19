@@ -1,0 +1,315 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: noderesourceprofiles.kqos.io
+spec:
+  group: kqos.io
+  names:
+    categories:
+    - kqos
+    kind: NodeResourceProfile
+    listKind: NodeResourceProfileList
+    plural: noderesourceprofiles
+    shortNames:
+    - nrp
+    singular: noderesourceprofile
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.pressure.level
+      name: Pressure
+      type: string
+    - jsonPath: .status.pressure.cpuUtilizationPercent
+      name: CPU%
+      type: integer
+    - jsonPath: .status.pressure.memoryUtilizationPercent
+      name: Mem%
+      type: integer
+    - jsonPath: .status.reclaimable.cpu
+      name: Reclaim-CPU
+      type: string
+    - jsonPath: .status.reclaimable.memory
+      name: Reclaim-Mem
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          NodeResourceProfile is the per-node view of what was promised, what is
+          actually used, and how much of the difference kqos is prepared to resell.
+          One object per node, written by the agent DaemonSet, read by the overcommit
+          controller and the scheduler plugin.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              NodeResourceProfileSpec is intentionally thin: the profile is a report, and
+              the only thing the control plane writes into it is which node it describes.
+            properties:
+              nodeName:
+                description: |-
+                  NodeName is the node this profile describes. Always equal to the object
+                  name; carried in the spec so consumers do not have to rely on naming.
+                type: string
+            required:
+            - nodeName
+            type: object
+          status:
+            description: NodeResourceProfileStatus is written exclusively by the node
+              agent.
+            properties:
+              advisorRevision:
+                description: |-
+                  AdvisorRevision increments on every recommendation change, giving
+                  consumers a cheap way to detect staleness.
+                format: int64
+                type: integer
+              allocatable:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: Allocatable mirrors the node's allocatable resources.
+                type: object
+              capacity:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: Capacity mirrors the node's physical resources.
+                type: object
+              conditions:
+                description: Conditions carries AgentHealthy and TopologyReady.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              cpuSetPools:
+                description: CPUSetPools records the CPU partitioning the agent has
+                  applied.
+                items:
+                  description: CPUSetPool is one contiguous CPU assignment managed
+                    by the agent.
+                  properties:
+                    cpus:
+                      description: CPUs is the Linux cpuset expression currently applied,
+                        e.g. "0-3,8".
+                      type: string
+                    name:
+                      description: |-
+                        Name identifies the pool: "reserved", "shared", "reclaimed", or the pod
+                        UID for a dedicated assignment.
+                      type: string
+                    qosLevel:
+                      description: QoSLevel is the class this pool serves.
+                      type: string
+                    size:
+                      description: Size is the number of CPUs the expression resolves
+                        to.
+                      format: int32
+                      type: integer
+                  required:
+                  - cpus
+                  - name
+                  - qosLevel
+                  - size
+                  type: object
+                type: array
+              lastReportTime:
+                description: LastReportTime is when the agent last refreshed this
+                  status.
+                format: date-time
+                type: string
+              pressure:
+                description: Pressure is the current stress classification.
+                properties:
+                  cpuSomeStalledPercent:
+                    description: |-
+                      CPUSomeStalledPercent is the PSI "cpu some avg10" value, which detects
+                      contention that raw utilisation misses: a node can be at 70% CPU and still
+                      be starving latency-critical threads.
+                    format: int32
+                    type: integer
+                  cpuUtilizationPercent:
+                    description: CPUUtilizationPercent is node-wide CPU consumption,
+                      0-100.
+                    format: int32
+                    type: integer
+                  level:
+                    description: Level is the coarse classification the eviction manager
+                      acts on.
+                    type: string
+                  memoryFullStalledPercent:
+                    description: MemoryFullStalledPercent is the PSI "memory full
+                      avg10" value.
+                    format: int32
+                    type: integer
+                  memoryUtilizationPercent:
+                    description: MemoryUtilizationPercent is node-wide memory consumption,
+                      0-100.
+                    format: int32
+                    type: integer
+                type: object
+              qosAllocations:
+                additionalProperties:
+                  description: |-
+                    QoSAllocation is the per-class breakdown of what was promised versus what is
+                    actually being consumed. The gap between the two is the source of every
+                    reclaimable core kqos hands out.
+                  properties:
+                    actual:
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: |-
+                        Actual is measured consumption read from cgroup v2, smoothed by the
+                        advisor's window.
+                      type: object
+                    limits:
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: Limits is the sum of container limits across the
+                        class.
+                      type: object
+                    pods:
+                      description: Pods is the number of running pods in this class.
+                      format: int32
+                      type: integer
+                    requested:
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: Requested is the sum of container requests across
+                        the class.
+                      type: object
+                  type: object
+                description: QoSAllocations breaks allocation down by class.
+                type: object
+              reclaimable:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: |-
+                  Reclaimable is the headroom the advisor is willing to oversell. The
+                  overcommit controller copies this onto the Node as extended resources.
+                type: object
+              topologyZones:
+                description: TopologyZones describes the NUMA layout used for dedicated
+                  placement.
+                items:
+                  description: TopologyZone is one NUMA node as seen by the agent.
+                  properties:
+                    allocatableCpus:
+                      description: AllocatableCPUs is how many CPUs in the zone are
+                        not already dedicated.
+                      format: int32
+                      type: integer
+                    cpus:
+                      description: CPUs is the cpuset expression of CPUs in this zone.
+                      type: string
+                    id:
+                      description: ID is the NUMA node id.
+                      format: int32
+                      type: integer
+                  required:
+                  - allocatableCpus
+                  - cpus
+                  - id
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
