@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kongxiangrui/kqos/pkg/metrics"
+	"github.com/xkong-study/kqos/pkg/metrics"
 )
 
 // Publisher is the agent side of the data plane.

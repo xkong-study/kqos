@@ -1,4 +1,4 @@
-module github.com/kongxiangrui/kqos
+module github.com/xkong-study/kqos
 
 go 1.26.0
 

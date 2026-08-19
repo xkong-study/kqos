@@ -20,10 +20,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kongxiangrui/kqos/pkg/agent/cgroup"
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
-	"github.com/kongxiangrui/kqos/pkg/cpuset"
-	"github.com/kongxiangrui/kqos/pkg/qos"
+	"github.com/xkong-study/kqos/pkg/agent/cgroup"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/cpuset"
+	"github.com/xkong-study/kqos/pkg/qos"
 )
 
 // Tier weights written to cpu.weight. The kernel range is 1..10000 with a

@@ -14,9 +14,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kongxiangrui/kqos/pkg/agent/collector"
-	"github.com/kongxiangrui/kqos/pkg/agent/sysadvisor"
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/agent/collector"
+	"github.com/xkong-study/kqos/pkg/agent/sysadvisor"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
 )
 
 // Signal is everything a plugin gets to reason about. Passing one struct

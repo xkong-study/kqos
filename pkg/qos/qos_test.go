@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
 )
 
 func pod(annotations map[string]string, containers ...corev1.Container) *corev1.Pod {

@@ -13,8 +13,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/kongxiangrui/kqos/pkg/agent/collector"
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/agent/collector"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
 )
 
 // Recommendation is one advisor verdict for one node.

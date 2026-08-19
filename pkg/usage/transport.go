@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/kongxiangrui/kqos/pkg/metrics"
+	"github.com/xkong-study/kqos/pkg/metrics"
 )
 
 // ReportPath is the endpoint agents push to.

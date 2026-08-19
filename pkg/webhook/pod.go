@@ -25,9 +25,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
-	"github.com/kongxiangrui/kqos/pkg/metrics"
-	"github.com/kongxiangrui/kqos/pkg/qos"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/metrics"
+	"github.com/xkong-study/kqos/pkg/qos"
 )
 
 // PodMutator implements the mutating admission path.

@@ -18,15 +18,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kongxiangrui/kqos/pkg/agent/cgroup"
-	"github.com/kongxiangrui/kqos/pkg/agent/collector"
-	"github.com/kongxiangrui/kqos/pkg/agent/cpupool"
-	"github.com/kongxiangrui/kqos/pkg/agent/eviction"
-	"github.com/kongxiangrui/kqos/pkg/agent/sysadvisor"
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
-	"github.com/kongxiangrui/kqos/pkg/metrics"
-	"github.com/kongxiangrui/kqos/pkg/qos"
-	"github.com/kongxiangrui/kqos/pkg/usage"
+	"github.com/xkong-study/kqos/pkg/agent/cgroup"
+	"github.com/xkong-study/kqos/pkg/agent/collector"
+	"github.com/xkong-study/kqos/pkg/agent/cpupool"
+	"github.com/xkong-study/kqos/pkg/agent/eviction"
+	"github.com/xkong-study/kqos/pkg/agent/sysadvisor"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/metrics"
+	"github.com/xkong-study/kqos/pkg/qos"
+	"github.com/xkong-study/kqos/pkg/usage"
 )
 
 // Options configures one agent instance.

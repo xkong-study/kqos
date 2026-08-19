@@ -7,8 +7,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
-	"github.com/kongxiangrui/kqos/pkg/qos"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/qos"
 )
 
 func init() {

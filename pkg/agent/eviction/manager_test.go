@@ -13,9 +13,9 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 
-	"github.com/kongxiangrui/kqos/pkg/agent/collector"
-	"github.com/kongxiangrui/kqos/pkg/agent/sysadvisor"
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/agent/collector"
+	"github.com/xkong-study/kqos/pkg/agent/sysadvisor"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
 )
 
 func testPod(name string, level v1alpha1.QoSLevel, cpuReq string) *corev1.Pod {

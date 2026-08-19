@@ -22,9 +22,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
-	"github.com/kongxiangrui/kqos/pkg/metrics"
-	"github.com/kongxiangrui/kqos/pkg/usage"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/metrics"
+	"github.com/xkong-study/kqos/pkg/usage"
 )
 
 // Reconciler fills in WorkloadProfile status from the usage store.

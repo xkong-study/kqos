@@ -10,12 +10,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kongxiangrui/kqos/pkg/agent/collector"
-	"github.com/kongxiangrui/kqos/pkg/agent/sysadvisor"
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
-	"github.com/kongxiangrui/kqos/pkg/metrics"
-	"github.com/kongxiangrui/kqos/pkg/qos"
-	"github.com/kongxiangrui/kqos/pkg/usage"
+	"github.com/xkong-study/kqos/pkg/agent/collector"
+	"github.com/xkong-study/kqos/pkg/agent/sysadvisor"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/metrics"
+	"github.com/xkong-study/kqos/pkg/qos"
+	"github.com/xkong-study/kqos/pkg/usage"
 )
 
 // report writes the agent's findings into the node's NodeResourceProfile,

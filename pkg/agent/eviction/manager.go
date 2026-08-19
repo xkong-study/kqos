@@ -13,9 +13,9 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
-	"github.com/kongxiangrui/kqos/pkg/metrics"
-	"github.com/kongxiangrui/kqos/pkg/qos"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/metrics"
+	"github.com/xkong-study/kqos/pkg/qos"
 )
 
 // Manager runs the plugins and decides which of their verdicts survive.

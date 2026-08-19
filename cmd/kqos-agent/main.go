@@ -23,10 +23,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/kongxiangrui/kqos/pkg/agent"
-	"github.com/kongxiangrui/kqos/pkg/agent/cgroup"
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
-	kqosmetrics "github.com/kongxiangrui/kqos/pkg/metrics"
+	"github.com/xkong-study/kqos/pkg/agent"
+	"github.com/xkong-study/kqos/pkg/agent/cgroup"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
+	kqosmetrics "github.com/xkong-study/kqos/pkg/metrics"
 )
 
 var scheme = runtime.NewScheme()

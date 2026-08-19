@@ -16,9 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
-	kqosmetrics "github.com/kongxiangrui/kqos/pkg/metrics"
-	kqoswebhook "github.com/kongxiangrui/kqos/pkg/webhook"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
+	kqosmetrics "github.com/xkong-study/kqos/pkg/metrics"
+	kqoswebhook "github.com/xkong-study/kqos/pkg/webhook"
 )
 
 var scheme = runtime.NewScheme()

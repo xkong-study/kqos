@@ -20,13 +20,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/kongxiangrui/kqos/pkg/agent"
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
-	"github.com/kongxiangrui/kqos/pkg/controller/overcommit"
-	"github.com/kongxiangrui/kqos/pkg/controller/policy"
-	"github.com/kongxiangrui/kqos/pkg/controller/profile"
-	kqosmetrics "github.com/kongxiangrui/kqos/pkg/metrics"
-	"github.com/kongxiangrui/kqos/pkg/usage"
+	"github.com/xkong-study/kqos/pkg/agent"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/controller/overcommit"
+	"github.com/xkong-study/kqos/pkg/controller/policy"
+	"github.com/xkong-study/kqos/pkg/controller/profile"
+	kqosmetrics "github.com/xkong-study/kqos/pkg/metrics"
+	"github.com/xkong-study/kqos/pkg/usage"
 )
 
 var scheme = runtime.NewScheme()

@@ -7,7 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/kongxiangrui/kqos/pkg/agent/cgroup"
+	"github.com/xkong-study/kqos/pkg/agent/cgroup"
 )
 
 func TestDeltaMilliCoresConvertsACounterIntoARate(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kongxiangrui/kqos/pkg/cpuset"
+	"github.com/xkong-study/kqos/pkg/cpuset"
 )
 
 // SysNodePath is where the kernel exposes NUMA topology.

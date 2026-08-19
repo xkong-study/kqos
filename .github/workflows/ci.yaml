@@ -1,0 +1,99 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l ./cmd ./pkg)
+          if [ -n "$unformatted" ]; then
+            echo "not gofmt-clean:"; echo "$unformatted"; exit 1
+          fi
+
+      - name: vet
+        run: go vet ./...
+
+      - name: test
+        run: go test ./... -count=1 -race
+
+      - name: build
+        run: make build
+
+      # The generated CRDs are committed, so a change to the API types that was
+      # not regenerated would otherwise ship a schema that does not match the Go
+      # structs -- which is exactly the mismatch that made every status write
+      # fail the first time this was deployed.
+      - name: generated manifests are up to date
+        run: |
+          make generate
+          if ! git diff --exit-code -- deploy/crds pkg/apis; then
+            echo "run 'make generate' and commit the result"; exit 1
+          fi
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: kqos
+          config: deploy/kind-cluster.yaml
+
+      - name: build and load the image
+        run: make kind-load ARCH=amd64
+
+      - name: deploy
+        run: make deploy
+
+      - name: the agents must actually measure something
+        run: |
+          # Wait for every node to publish a reclaimable figure. A profile with
+          # an empty status means the agent started but its reporting path is
+          # broken, which no unit test can catch.
+          for i in $(seq 1 60); do
+            ready=$(kubectl get noderesourceprofiles \
+              -o jsonpath='{range .items[*]}{.status.reclaimable.cpu}{"\n"}{end}' \
+              | grep -c . || true)
+            total=$(kubectl get nodes --no-headers | wc -l)
+            [ "$ready" = "$total" ] && break
+            sleep 5
+          done
+          kubectl get noderesourceprofiles -o wide
+          test "$ready" = "$total"
+
+      - name: the reclaimed tier must be rewritten and scheduled
+        run: |
+          kubectl apply -f examples/
+          kubectl -n kqos-demo rollout status deploy/batch-etl --timeout=180s
+          spec=$(kubectl -n kqos-demo get pod -l app=batch-etl \
+            -o jsonpath='{.items[0].spec.containers[0].resources.requests}')
+          echo "$spec"
+          echo "$spec" | grep -q 'kqos.io/reclaimed-cpu'
+          # The native cpu request must be gone; that is the whole mechanism.
+          echo "$spec" | grep -qv '"cpu"'
+
+      - name: dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n kqos-system get pods -o wide || true
+          kubectl -n kqos-system logs -l app.kubernetes.io/component=agent --tail=100 --max-log-requests=6 || true
+          kubectl -n kqos-system logs -l app.kubernetes.io/component=controller --tail=100 --max-log-requests=4 || true

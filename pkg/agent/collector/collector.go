@@ -15,9 +15,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/kongxiangrui/kqos/pkg/agent/cgroup"
-	"github.com/kongxiangrui/kqos/pkg/apis/kqos/v1alpha1"
-	"github.com/kongxiangrui/kqos/pkg/qos"
+	"github.com/xkong-study/kqos/pkg/agent/cgroup"
+	"github.com/xkong-study/kqos/pkg/apis/kqos/v1alpha1"
+	"github.com/xkong-study/kqos/pkg/qos"
 )
 
 // PodSample is one observation of one pod.
