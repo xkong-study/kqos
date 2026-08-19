@@ -83,13 +83,55 @@ jobs:
       - name: the reclaimed tier must be rewritten and scheduled
         run: |
           kubectl apply -f examples/
-          kubectl -n kqos-demo rollout status deploy/batch-etl --timeout=180s
-          spec=$(kubectl -n kqos-demo get pod -l app=batch-etl \
-            -o jsonpath='{.items[0].spec.containers[0].resources.requests}')
-          echo "$spec"
-          echo "$spec" | grep -q 'kqos.io/reclaimed-cpu'
-          # The native cpu request must be gone; that is the whole mechanism.
-          echo "$spec" | grep -qv '"cpu"'
+
+          # Deliberately NOT a full rollout wait. Each batch replica asks for
+          # 1500m of reclaimed CPU, and how many of them fit is a function of
+          # how much idle capacity kqos actually measured on this machine -- on
+          # a 4-core runner that is two pods, not four. Asserting a replica
+          # count here would be asserting the size of the runner rather than
+          # the behaviour of the code.
+          for i in $(seq 1 36); do
+            ready=$(kubectl -n kqos-demo get deploy batch-etl \
+              -o jsonpath='{.status.availableReplicas}' 2>/dev/null || echo 0)
+            [ "${ready:-0}" -ge 1 ] && break
+            sleep 5
+          done
+          kubectl -n kqos-demo get pods -o wide
+          test "${ready:-0}" -ge 1
+
+      - name: the rewrite must remove the native cpu request
+        run: |
+          req=$(kubectl -n kqos-demo get pod -l app=batch-etl \
+            --field-selector status.phase=Running \
+            -o json | jq -c '.items[0].spec.containers[0].resources.requests')
+          echo "requests after admission: $req"
+
+          # The extended resource must be there ...
+          echo "$req" | jq -e 'has("kqos.io/reclaimed-cpu")' >/dev/null
+          # ... and the native cpu request must be gone. This is the whole
+          # mechanism: after admission the pod is invisible to the scheduler's
+          # real-capacity accounting.
+          echo "$req" | jq -e 'has("cpu") | not' >/dev/null
+          # The original spec must still be recoverable for debugging.
+          kubectl -n kqos-demo get pod -l app=batch-etl \
+            -o jsonpath='{.items[0].metadata.annotations.kqos\.io/original-resources}' \
+            | grep -q 1500m
+
+      - name: extended resources must be what gates scheduling
+        run: |
+          # Any batch replica that did not fit must be Pending specifically
+          # because the node ran out of kqos.io/reclaimed-cpu -- not because it
+          # ran out of real CPU. That distinction is the entire design, and a
+          # short cluster is the only place it can be observed.
+          pending=$(kubectl -n kqos-demo get pods -l app=batch-etl \
+            --field-selector status.phase=Pending -o name | wc -l)
+          echo "pending replicas: $pending"
+          if [ "$pending" -gt 0 ]; then
+            msg=$(kubectl -n kqos-demo describe pods -l app=batch-etl \
+              | grep -A2 "FailedScheduling" | head -20)
+            echo "$msg"
+            echo "$msg" | grep -q "kqos.io/reclaimed-cpu"
+          fi
 
       - name: dump diagnostics on failure
         if: failure()
